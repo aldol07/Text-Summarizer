@@ -1,0 +1,40 @@
+# Pointer-Generator (See et al., 2017) training configuration.
+# Train one variant:   python scripts/train_lstm.py --variant pointer_coverage
+# Variants deep-merge over `defaults` and form the ablation study.
+
+defaults:
+  model:
+    vocab_size: 15000
+    embedding_dim: 128
+    hidden_dim: 256
+    dropout: 0.3
+    use_pointer: true
+    use_coverage: true
+  data:
+    dataset: samsum
+    max_source_tokens: 400 # 95th percentile is ~330 tokens
+    max_target_tokens: 80 # longest SAMSum reference is 77
+    min_freq: 3
+  training:
+    epochs: 30
+    batch_size: 64 # per-step cost is kernel-launch bound: 64 is ~2x faster per epoch than 32 on an RTX 5060
+    max_batch_tokens: 12000 # batch x longest source; peak ~2.8 GB GPU memory (64 x 400 ran out of 8 GB)
+    learning_rate: 0.001
+    grad_clip: 2.0
+    coverage_loss_weight: 1.0
+    patience: 4
+    seed: 42
+  decoding:
+    beam_size: 4
+    min_length: 8
+    max_length: 80
+    length_penalty: 1.0
+    block_ngram_repeat: 3
+
+variants:
+  seq2seq_attention: # baseline: BiLSTM + Bahdanau attention, no copying
+    model: { use_pointer: false, use_coverage: false }
+  pointer: # + copy mechanism
+    model: { use_pointer: true, use_coverage: false }
+  pointer_coverage: # + coverage (full model)
+    model: { use_pointer: true, use_coverage: true }

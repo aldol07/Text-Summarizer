@@ -1,0 +1,60 @@
+# Private planning / notes
+plan/
+*.plan.md
+notes/
+
+# Pipeline outputs, data, models
+artifacts/
+logs/
+data/
+models/
+*.onnx
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.zip
+nltk_data/
+runs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environments
+venv/
+.venv/
+env/
+.env
+.env.*
+
+# Notebooks / IDE / OS
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Deploy tooling
+.vercel/
+
+# Benchmark per-document dumps (large; regenerate with scripts/benchmark.py)
+reports/**/per_document.csv
+
+# Local test suite (kept on disk, excluded from the published repo)
+tests/
+.pytest_cache/
+
+# Local tooling / logs
+.claude/
+CLAUDE.md
+*.log

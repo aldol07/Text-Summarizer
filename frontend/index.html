@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Text Summarizer</title>
+    <meta name="description" content="Summarize articles, documents and chats." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><path d='M8 10h16M8 16h11M8 22h7' stroke='white' stroke-width='2.6' stroke-linecap='round'/></svg>" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="banner" class="banner" hidden></div>
+
+    <header class="site-header">
+      <div class="brand">
+        <h1>Text Summarizer</h1>
+        <p class="tagline">Summarize articles, documents and chats in seconds.</p>
+      </div>
+      <span id="status" class="status status-pending" title="Server status">connecting…</span>
+    </header>
+
+    <main class="layout">
+      <!-- Input -------------------------------------------------------------------- -->
+      <section class="card input-card" aria-labelledby="input-title">
+        <h2 id="input-title" class="visually-hidden">Input</h2>
+        <div class="tabs" role="tablist">
+          <button class="tab active" role="tab" data-tab="text" aria-selected="true">Text</button>
+          <button class="tab" role="tab" data-tab="url" aria-selected="false">URL</button>
+          <button class="tab" role="tab" data-tab="file" aria-selected="false">File</button>
+        </div>
+
+        <div class="tab-panel" data-panel="text">
+          <textarea id="text" rows="14" placeholder="Paste an article, a report, or a chat (one “Name: message” per line)…"></textarea>
+          <div class="row between small">
+            <div class="row gap">
+              <button class="link" id="sample-article" type="button">Sample article</button>
+              <button class="link" id="sample-chat" type="button">Sample chat</button>
+              <button class="link" id="clear" type="button">Clear</button>
+            </div>
+            <span id="char-count" class="muted">0 characters</span>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="url" hidden>
+          <label for="url">Web page URL</label>
+          <div class="row gap">
+            <input id="url" type="url" placeholder="https://en.wikipedia.org/wiki/Automatic_summarization" />
+            <button id="fetch-url" class="secondary" type="button">Fetch</button>
+          </div>
+          <p class="muted small">The main text of the page is extracted and placed in the Text tab.</p>
+        </div>
+
+        <div class="tab-panel" data-panel="file" hidden>
+          <label for="file">PDF, TXT or Markdown (max 5 MB)</label>
+          <input id="file" type="file" accept=".pdf,.txt,.md,.markdown,text/plain,application/pdf" />
+          <p class="muted small">Text-based PDFs only; scanned PDFs are not supported.</p>
+        </div>
+
+        <div class="options">
+          <div class="field">
+            <label for="mode">Text type</label>
+            <select id="mode">
+              <option value="auto">Detect automatically</option>
+              <option value="article">Article / document</option>
+              <option value="dialogue">Chat / conversation</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="length">Summary length</label>
+            <select id="length">
+              <option value="2">Short</option>
+              <option value="3" selected>Medium</option>
+              <option value="5">Long</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row gap actions">
+          <button id="summarize" class="primary" type="button">Summarize</button>
+        </div>
+        <p id="error" class="error" role="alert" hidden></p>
+      </section>
+
+      <!-- Output ------------------------------------------------------------------- -->
+      <section class="card output-card" aria-live="polite" aria-labelledby="output-title">
+        <h2 id="output-title" class="visually-hidden">Result</h2>
+        <div id="placeholder" class="placeholder">
+          <p>Your summary will appear here.</p>
+          <p class="muted small">Paste text, fetch a URL or upload a file, then press <strong>Summarize</strong>.</p>
+        </div>
+
+        <div id="loading" class="loading" hidden><span class="spinner"></span><span id="loading-text">Summarizing…</span></div>
+
+        <div id="result" hidden>
+          <div class="row between wrap">
+            <span id="badge-mode" class="badge"></span>
+            <div class="row gap no-print">
+              <button id="copy" class="ghost" type="button">Copy</button>
+              <button id="download" class="ghost" type="button">Markdown</button>
+              <button id="print" class="ghost" type="button">PDF</button>
+            </div>
+          </div>
+          <p id="summary" class="summary"></p>
+          <ul id="warnings" class="warnings"></ul>
+
+          <div id="metrics" class="metrics"></div>
+
+          <h3>Keywords</h3>
+          <div id="keywords" class="chips"></div>
+          <h3>Key phrases</h3>
+          <div id="phrases" class="chips"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">Built by aldol</footer>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

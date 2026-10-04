@@ -1,0 +1,108 @@
+# Benchmark configuration for scripts/benchmark.py
+#
+# Each experiment = method (+ params) + selection options + preprocessing.
+# Dataset defaults below are merged under each experiment's own settings.
+# Valid keys:
+#   params:        constructor arguments of the summarizer class
+#   selection:     num_sentences, ratio, use_mmr, mmr_lambda, position_weight, min_words
+#   preprocessing: normalization, segmenter, split_on_newlines, remove_stopwords, min_token_length, ...
+
+baseline: Lead-3 # Δ and significance tests are computed against this system
+
+datasets:
+  cnn_dailymail:
+    split: test
+    limit: 1000
+    selection: { num_sentences: 3 }
+  samsum:
+    split: test
+    limit: null # all 819 dialogues
+    selection: { num_sentences: 3 }
+    preprocessing: { split_on_newlines: true } # one utterance per line
+
+suites:
+  main:
+    - { name: Random, method: random, description: "Three random sentences (floor)" }
+    - { name: Lead-3, method: lead, description: "First three sentences (standard news baseline)" }
+    - { name: Luhn, method: luhn, description: "Significant-word clusters (1958)" }
+    - { name: TF-IDF centroid, method: tfidf, description: "Cosine similarity to the document centroid" }
+    - { name: LSA, method: lsa, description: "SVD topic strength (Steinberger & Ježek)" }
+    - { name: LexRank, method: lexrank, description: "Thresholded cosine graph + PageRank" }
+    - { name: TextRank, method: textrank, description: "Word-overlap graph + PageRank" }
+    - { name: Oracle, method: oracle, description: "Greedy ROUGE-maximizing selection (upper bound)" }
+
+  # Extractive vs abstractive on the same SAMSum test dialogues.
+  # Requires: scripts/train_lstm.py (all variants) then scripts/export_onnx.py.
+  # All LSTM rows run on CPU with ONNX Runtime (1 thread), same as the deployed API.
+  abstractive:
+    - { name: Lead-3, method: lead, description: "First three utterances" }
+    - { name: TF-IDF centroid, method: tfidf, description: "Best extractive method on SAMSum" }
+    - { name: TextRank, method: textrank }
+    - name: LSTM seq2seq + attention
+      method: lstm
+      params: { model_dir: artifacts/onnx/seq2seq_attention/fp32 }
+      description: "BiLSTM encoder, Bahdanau attention, no copying"
+    - name: LSTM + pointer
+      method: lstm
+      params: { model_dir: artifacts/onnx/pointer/fp32 }
+      description: "+ copy mechanism (p_gen)"
+    - name: LSTM + pointer + coverage
+      method: lstm
+      params: { model_dir: artifacts/onnx/pointer_coverage/fp32 }
+      description: "+ coverage (full pointer-generator)"
+    - name: LSTM + pointer + coverage (int8)
+      method: lstm
+      params: { model_dir: artifacts/onnx/pointer_coverage/int8 }
+      description: "Deployed model: dynamic int8 quantization"
+    - { name: Oracle, method: oracle, description: "Greedy ROUGE-maximizing extraction (upper bound)" }
+
+  ablations:
+    - { name: Lead-3, method: lead }
+    - { name: TextRank, method: textrank }
+    - name: TextRank (cosine)
+      method: textrank
+      params: { similarity: cosine }
+      description: "TF-IDF cosine edges instead of word overlap"
+    - name: TextRank + MMR
+      method: textrank
+      selection: { use_mmr: true, mmr_lambda: 0.7 }
+      description: "Redundancy-aware selection"
+    - name: TextRank + position
+      method: textrank
+      selection: { position_weight: 0.3 }
+      description: "30% lead-position prior blended into scores"
+    - name: TextRank + position + MMR
+      method: textrank
+      selection: { position_weight: 0.3, use_mmr: true, mmr_lambda: 0.7 }
+    - name: TextRank (lemma)
+      method: textrank
+      preprocessing: { normalization: lemma }
+      description: "WordNet lemmatization instead of Porter stemming"
+    - name: TextRank (no normalization)
+      method: textrank
+      preprocessing: { normalization: none }
+    - name: TextRank (keep stopwords)
+      method: textrank
+      preprocessing: { remove_stopwords: false }
+    - name: LexRank (continuous)
+      method: lexrank
+      params: { threshold: null }
+      description: "Weighted edges instead of a 0.1 threshold"
+    - name: LexRank + position
+      method: lexrank
+      selection: { position_weight: 0.3 }
+    - name: TF-IDF centroid (cosine)
+      method: tfidf
+      params: { scoring: cosine }
+      description: "Cosine to centroid instead of MEAD's summed centroid weights"
+    - name: TF-IDF centroid + position
+      method: tfidf
+      selection: { position_weight: 0.3 }
+    - name: LSA (TF-IDF, all topics)
+      method: lsa
+      params: { weighting: tfidf, n_topics: null }
+      description: "Sublinear TF-IDF weights, every topic with σ >= 0.5·σmax"
+    - name: TextRank (min 8 words)
+      method: textrank
+      selection: { min_words: 8 }
+      description: "Skip very short sentences"

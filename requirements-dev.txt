@@ -1,0 +1,20 @@
+numpy>=1.26
+nltk>=3.8
+PyYAML>=6.0
+pytest>=8.0
+ruff>=0.6
+
+# Evaluation / benchmarking only (not needed to serve summaries)
+pandas>=2.0
+pyarrow>=14
+huggingface_hub>=0.20
+matplotlib>=3.8
+rouge-score>=0.1.2  # only used to cross-check our ROUGE implementation in tests
+
+# LSTM training and ONNX export (serving needs only onnxruntime + numpy)
+torch>=2.2
+onnx>=1.16
+onnxscript>=0.1
+ml-dtypes>=0.5,<0.6  # keep compatible with numpy 1.26
+onnxruntime>=1.17
+psutil>=5.9
