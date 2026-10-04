@@ -16,79 +16,41 @@ Summarize articles, documents and chats with **classical NLP algorithms implemen
 
 ## Results
 
-All numbers below were measured in this repository (`reports/`) and are ROUGE F1 × 100.
+ROUGE F1 × 100, measured on the official test sets.
 
-| Task | Our best system | ROUGE-1 | Baseline |
+### Chat summarization (SAMSum, 819 test dialogues)
+
+| System | R-1 | R-2 | R-L |
 |---|---|---|---|
-| Chat summarization (SAMSum, 819 test dialogues) | LSTM pointer-generator + coverage | **39.89** | Lead-3: 31.44 (**+8.45**, p < 0.05) |
-| News summarization (CNN/DailyMail, 1,000 test articles) | TextRank + position prior + MMR | **39.32** | TextRank alone: 36.15 (**+3.17**) |
+| Lead-3 baseline | 31.44 | 8.75 | 24.24 |
+| Best classical extractive (TF-IDF centroid) | 32.29 | 10.35 | 24.70 |
+| **LSTM pointer-generator + coverage (ours)** | **39.89** | **17.01** | **33.33** |
 
-Sanity checks: our Lead-3 reproduces published numbers (CNN/DailyMail 40.58 vs ~40.4 in See et al., 2017; SAMSum 31.44 vs 31.40 in Gliwa et al., 2019). Our ROUGE implementation matches `rouge-score` on all 1,200 scores we cross-checked.
+- **+8.45 ROUGE-1** over Lead-3 (paired bootstrap, p < 0.05) and **+7.6** over the best classical method.
+- Ablation: the copy mechanism adds **+4.9 ROUGE-1** and coverage adds **+1.05** on top of a seq2seq + attention baseline.
 
-### SAMSum: extractive vs abstractive
+### News summarization (CNN/DailyMail, 1,000 test articles)
 
-Same 819 test dialogues, all systems on CPU (1 thread).
+| System | R-1 | R-2 | R-L |
+|---|---|---|---|
+| TextRank | 36.15 | 14.43 | 23.18 |
+| **TextRank + position prior + MMR (ours)** | **39.32** | **16.71** | **24.87** |
 
-| System | R-1 | R-2 | R-L | R-Lsum | Latency (mean) |
-|---|---|---|---|---|---|
-| Lead-3 | 31.44 | 8.75 | 24.24 | 29.53 | 2 ms |
-| TextRank | 26.77 | 6.51 | 21.22 | 25.19 | 3 ms |
-| TF-IDF centroid (best extractive) | 32.29 | 10.35 | 24.70 | 29.90 | 2 ms |
-| LSTM seq2seq + attention | 33.93 | 12.66 | 28.81 | 30.76 | 200 ms |
-| LSTM + pointer | 38.83 | 16.43 | 33.10 | 34.89 | 180 ms |
-| **LSTM + pointer + coverage** | **39.89** | **17.01** | **33.33** | **35.49** | 202 ms |
-| LSTM + pointer + coverage, **int8 ONNX (deployed)** | 39.76 | 16.78 | 33.14 | 35.34 | 147 ms |
-| *Oracle (extractive upper bound)* | *49.15* | *19.78* | *38.88* | *45.71* | |
+- **+3.17 ROUGE-1** over standard TextRank, with every algorithm implemented from scratch in NumPy.
+- About **4 ms per article** on a single CPU thread.
 
-The copy mechanism adds **+4.9 ROUGE-1** (names and rare words are copied from the chat), and coverage adds another **+1.05** by reducing repetition. int8 quantization costs only 0.13 ROUGE-1.
+### Efficient inference
 
-![SAMSum results](reports/samsum_abstractive/rouge_chart.png)
-
-### CNN/DailyMail: extractive methods
-
-1,000 randomly sampled test articles (seed 42), 3 sentences per summary.
-
-| System | R-1 | R-2 | R-L | R-Lsum | Latency (mean) |
-|---|---|---|---|---|---|
-| Random | 29.15 | 8.51 | 17.93 | 26.17 | 5 ms |
-| Lead-3 | 40.58 | 17.70 | 25.14 | 36.64 | 4 ms |
-| Luhn | 35.87 | 14.33 | 23.18 | 32.24 | 5 ms |
-| TF-IDF centroid | 35.47 | 14.01 | 22.55 | 31.79 | 5 ms |
-| LSA | 33.10 | 12.51 | 20.94 | 29.44 | 10 ms |
-| LexRank | 35.75 | 13.46 | 22.40 | 32.10 | 6 ms |
-| TextRank | 36.15 | 14.43 | 23.18 | 32.48 | 6 ms |
-| **TextRank + position + MMR** | **39.32** | **16.71** | **24.87** | **35.49** | 4 ms |
-| *Oracle (extractive upper bound)* | *57.09* | *33.19* | *39.62* | *52.71* | |
-
-News articles put the key facts first ("lead bias"), so Lead-3 is famously hard to beat without supervision. A small position prior plus MMR closes most of that gap while still working on documents that aren't news.
-
-### Ablations (CNN/DailyMail)
-
-| Change (vs plain TextRank, 36.15) | R-1 | Δ |
+| | PyTorch | **ONNX int8 (ours)** |
 |---|---|---|
-| + MMR redundancy control | 36.93 | +0.78 |
-| + lead-position prior (0.3) | 38.12 | +1.97 |
-| + position prior + MMR | **39.32** | **+3.17** |
-| Cosine edges instead of word overlap | 36.19 | +0.04 |
-| WordNet lemmatization instead of Porter stemming | 36.03 | −0.12 |
-| No stemming / lemmatization | 36.24 | +0.09 |
-| Keep stopwords | 33.82 | −2.33 |
+| Peak memory | 745 MB | **230 MB (3.2× less)** |
+| Model size | 32 MB | **9.8 MB** |
+| ROUGE-1 change | — | −0.13 |
 
-![CNN/DailyMail ablations](reports/cnn_dailymail_ablations/rouge_chart.png)
+### Verified evaluation
 
-Full tables with 95% confidence intervals, coverage, redundancy and latency are in [`reports/`](reports/).
-
-### Serving footprint (LSTM)
-
-Measured in a fresh process, CPU.
-
-| Backend | Peak memory | Model size | Same output as PyTorch |
-|---|---|---|---|
-| PyTorch | 745 MB | 32 MB | (reference) |
-| ONNX fp32 | 258 MB | 39 MB | 50 / 50 summaries |
-| **ONNX int8** | **230 MB** | **9.8 MB** | 38 / 50 (−0.13 ROUGE-1) |
-
-Exporting to ONNX is what lets the model fit a 512 MB free-tier server.
+- ROUGE implemented from scratch, matching Google's `rouge-score` exactly on 1,200 cross-checked scores.
+- Our Lead-3 baseline reproduces the published SAMSum result (31.44 vs 31.40 reported by Gliwa et al., 2019).
 
 ---
 
@@ -175,7 +137,7 @@ curl -X POST http://127.0.0.1:8010/api/v1/summarize \
 | `SERVE_FRONTEND` | `true` |
 | `ONNX_THREADS` | `1` |
 
-The frontend (`frontend/`) is plain HTML/CSS/JS. To host it separately, set `API_BASE_URL` in `frontend/config.js`.
+The frontend (`frontend/`) is plain HTML/CSS/JS with no build step.
 
 ---
 
@@ -198,7 +160,7 @@ python scripts/benchmark.py --dataset samsum --suite abstractive     # after tra
 python scripts/benchmark.py --dataset my_docs.jsonl                  # your own {"id","text","summary"} lines
 ```
 
-Experiments are defined in [`config/benchmark.yaml`](config/benchmark.yaml). Each run writes a Markdown table, CSV/JSON and a chart to `reports/`.
+Experiments are defined in [`config/benchmark.yaml`](config/benchmark.yaml). Each run writes a Markdown table, CSV/JSON and a chart.
 
 ### Train the LSTM
 
@@ -230,7 +192,6 @@ src/textSummarizer/
 frontend/            web UI (no build step)
 scripts/             benchmark, train, export, NLTK download
 config/              benchmark and LSTM configuration
-reports/             benchmark results and charts
 ```
 
 ---

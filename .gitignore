@@ -58,3 +58,6 @@ tests/
 .claude/
 CLAUDE.md
 *.log
+
+# Deployment config (kept local; settings are entered in the Render dashboard)
+render.yaml
